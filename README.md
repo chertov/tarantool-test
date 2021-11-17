@@ -1,4 +1,4 @@
-####Cargo.toml
+#### Cargo.toml
 ```toml
 [dependencies]
 tarantool = "0.4.2" # (1)
@@ -6,7 +6,7 @@ tarantool-test = { git = "https://github.com/chertov/tarantool-test" }
 tarantool-test-macro = { git = "https://github.com/chertov/tarantool-test" }
 ```
 
-####lib.rs
+#### lib.rs
 ```rust
 #[macro_use] extern crate tarantool_test_macro;
 
