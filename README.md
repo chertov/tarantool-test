@@ -11,7 +11,7 @@ tarantool-test-macro = { git = "https://github.com/chertov/tarantool-test" }
 #[macro_use] extern crate tarantool_test_macro;
 
 #[tnt_test]
-pub fn test_ok_void() {}
+pub fn test_void_ok() {}
 
 #[tnt_test]
 pub fn test_res_ok() -> Result<(), anyhow::Error> {
@@ -19,8 +19,8 @@ pub fn test_res_ok() -> Result<(), anyhow::Error> {
 }
 
 #[tnt_test]
-pub fn test_res_err() -> Result<(), anyhow::Error> {
-    Err(anyhow!("Test with Result Error"))
+pub fn test_void_panic() {
+    assert_eq!(3,2);
 }
 
 #[tnt_test]
@@ -28,9 +28,10 @@ pub fn test_res_panic() -> Result<(), anyhow::Error> {
     assert_eq!(3,2);
     Ok(())
 }
+
 #[tnt_test]
-pub fn test_panic_void() {
-    assert_eq!(3,2);
+pub fn test_res_err() -> Result<(), anyhow::Error> {
+    Err(anyhow!("Test with Result Error"))
 }
 
 use std::os::raw::c_int;
