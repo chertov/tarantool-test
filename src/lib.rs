@@ -9,15 +9,31 @@ enum TestFunction {
 
 #[derive(Debug, Clone)]
 pub struct TestInfo {
+    pub init_db: bool,
     pub name: String,
     pub path: String,
     func: TestFunction,
 }
 
-pub struct TestResult{
+#[derive(Debug)]
+pub struct TestResult {
     pub info: TestInfo,
     pub res: Option<Result<(), anyhow::Error>>,
     pub duration: std::time::Duration,
+}
+impl Clone for TestResult {
+    fn clone(&self) -> Self {
+        let res = match &self.res {
+            Some(Ok(())) => Some(Ok(())),
+            Some(Err(err)) => Some(Err(anyhow::anyhow!("{:?}", err))),
+            None => None,
+        };
+        Self {
+            info: self.info.clone(),
+            duration: self.duration,
+            res
+        }
+    }
 }
 
 static TESTS: once_cell::sync::Lazy<parking_lot::RwLock<std::collections::BTreeMap<String, Vec<TestInfo>>>> = once_cell::sync::Lazy::new(|| {
@@ -30,6 +46,11 @@ pub fn run() -> std::collections::BTreeMap<String, Vec<TestResult>> {
     for (module_path, module_tests) in tests {
         let mut results = vec![];
         for info in module_tests {
+
+            if info.init_db {
+                INIT_DB.read().as_ref().map(|init_db| init_db(info.clone()));
+            }
+            START.read().as_ref().map(|start| start(info.clone()));
             let now = std::time::Instant::now();
 
             let res = catch_unwind_silent(|| {
@@ -52,31 +73,48 @@ pub fn run() -> std::collections::BTreeMap<String, Vec<TestResult>> {
                     log::error!("test [{}::{}] is failed in {}! err: {:?}", info.path, info.name, duration_str, err);
                 },
             };
-            results.push(TestResult{info, res, duration})
+            let result = TestResult{info, res, duration};
+
+            END.read().as_ref().map(|end| end(result.clone()));
+
+            results.push(result)
         }
         modules.insert(module_path, results);
     }
     modules
 }
 
-
-pub fn __collect_test_void(path: &str, name: &str, func: TestFunctionVoid) {
-    collect_test(path, name, TestFunction::Void(func))
+pub fn set_init_db_hook(init_db: impl Fn(TestInfo) + 'static  + Send + Sync) {
+    INIT_DB.write().replace(Box::new(init_db));
 }
-pub fn __collect_test_with_result(path: &str, name: &str, func: TestFunctionResult) {
-    collect_test(path, name, TestFunction::Result(func))
+pub fn set_test_start_hook(callback: impl Fn(TestInfo) + 'static  + Send + Sync) {
+    START.write().replace(Box::new(callback));
+}
+pub fn set_test_end_hook(callback: impl Fn(TestResult) + 'static  + Send + Sync) {
+    END.write().replace(Box::new(callback));
 }
 
-fn collect_test(path: &str, name: &str, func: TestFunction) {
+static INIT_DB: once_cell::sync::Lazy<parking_lot::RwLock<Option<Box<dyn Fn(TestInfo) + 'static  + Send + Sync>>>> = once_cell::sync::Lazy::new(|| parking_lot::RwLock::new(None));
+static START: once_cell::sync::Lazy<parking_lot::RwLock<Option<Box<dyn Fn(TestInfo) + 'static + Send + Sync>>>> = once_cell::sync::Lazy::new(|| parking_lot::RwLock::new(None));
+static END: once_cell::sync::Lazy<parking_lot::RwLock<Option<Box<dyn Fn(TestResult) + 'static + Send + Sync>>>> = once_cell::sync::Lazy::new(|| parking_lot::RwLock::new(None));
+
+pub fn __collect_test_void(path: &str, name: &str, func: TestFunctionVoid, init_db: bool) {
+    collect_test(path, name, TestFunction::Void(func), init_db)
+}
+pub fn __collect_test_with_result(path: &str, name: &str, func: TestFunctionResult, init_db: bool) {
+    collect_test(path, name, TestFunction::Result(func), init_db)
+}
+
+fn collect_test(path: &str, name: &str, func: TestFunction, init_db: bool) {
     let path = path.to_string();
     let name = name.to_string();
     {
         if let Some(tests) = TESTS.write().get_mut(&path) {
-            tests.push(TestInfo{path, name, func});
+            tests.push(TestInfo{ init_db, path, name, func });
             return;
         }
     }
-    TESTS.write().insert(path.clone(), vec![TestInfo{path, name, func}]);
+    TESTS.write().insert(path.clone(), vec![TestInfo{ init_db, path, name, func }]);
 }
 
 
