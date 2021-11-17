@@ -2,5 +2,6 @@
 !*/
 !/src/**/*.rs
 !/Cargo.toml
+!/README.md
 
 !/**/.gitignore
