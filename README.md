@@ -34,7 +34,7 @@ pub fn test_panic_void() {
 }
 
 use std::os::raw::c_int;
-use tarantool_module::tuple::{FunctionArgs, FunctionCtx};
+use tarantool::tuple::{FunctionArgs, FunctionCtx};
 
 #[no_mangle]
 pub extern "C" fn rust_tests(_: FunctionCtx, _: FunctionArgs) -> c_int {
