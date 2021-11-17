@@ -33,6 +33,9 @@ pub fn test_panic_void() {
     assert_eq!(3,2);
 }
 
+use std::os::raw::c_int;
+use tarantool_module::tuple::{FunctionArgs, FunctionCtx};
+
 #[no_mangle]
 pub extern "C" fn rust_tests(_: FunctionCtx, _: FunctionArgs) -> c_int {
     // run all your tests inside tarantool thread
