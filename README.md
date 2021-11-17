@@ -38,7 +38,7 @@ use tarantool_module::tuple::{FunctionArgs, FunctionCtx};
 
 #[no_mangle]
 pub extern "C" fn rust_tests(_: FunctionCtx, _: FunctionArgs) -> c_int {
-    // run all your tests inside tarantool thread
+    // run all your tests inside the tarantool thread only!
     tarantool_test::run();
     0
 }
